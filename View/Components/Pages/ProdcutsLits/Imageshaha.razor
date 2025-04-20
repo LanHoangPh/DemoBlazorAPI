@@ -1,0 +1,39 @@
+﻿@page "/images"
+@using System.IO
+@inject IWebHostEnvironment Environment
+
+<h3>Danh sách ảnh trong wwwroot/uploads</h3>
+
+@if (imagePaths.Any())
+{
+    <div class="row">
+        @foreach (var imagePath in imagePaths)
+        {
+            <div class="col-md-3">
+                <img src="@imagePath" alt="Image" style="max-width: 100%; margin-bottom: 10px;" />
+                <p>@Path.GetFileName(imagePath)</p>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <p>Chưa có ảnh nào trong thư mục uploads.</p>
+}
+
+@code {
+    private List<string> imagePaths = new List<string>();
+
+    protected override void OnInitialized()
+    {
+        var uploadsDir = Path.Combine(Environment.WebRootPath, "uploads");
+        if (Directory.Exists(uploadsDir))
+        {
+            var files = Directory.GetFiles(uploadsDir)
+                .Where(f => new[] { ".jpg", ".png", ".gif" }.Contains(Path.GetExtension(f).ToLower()))
+                .ToList();
+
+            imagePaths = files.Select(f => $"/uploads/{Path.GetFileName(f)}").ToList();
+        }
+    }
+}

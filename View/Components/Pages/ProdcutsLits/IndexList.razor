@@ -1,0 +1,60 @@
+﻿@page "/products/indexlist"
+@using APIWeb.Data
+@using View.Services
+@inject ProductService ProductService
+@attribute [StreamRendering]
+<h3>IndexList</h3>
+
+<a class="btn btn-success" href="/products/create">Create</a>
+
+@if(Products == null)
+{
+    <p><em>Loading...</em></p>
+}
+else{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Price</th>
+                <th>Mota</th>
+                <th>Soluong</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var product in Products)
+            {
+                <tr>
+                    <td>@product.Name</td>
+                    <td>@product.Gia</td>
+                    <td>@product.MoTa</td>
+                    <td>@product.SoLuong</td>
+                    <td>
+                        <a class="btn btn-primary m-1" href="/products/update/@product.ID">Update</a>|
+                        <a class="btn btn-dark m-1" href="/products/details/@product.ID">Details</a>|
+                        <a class="btn btn-danger m-1" @onclick="() => Delete(product.ID)">Delete</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    public List<Product> Products;
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        await GetAllProducts();
+    }
+    protected async Task GetAllProducts()
+    {
+        Products = await ProductService.GetPAllroducts();
+    }
+    protected async Task Delete(int id)
+    {
+        await ProductService.DeleteProduct(id);
+        await GetAllProducts();
+    }
+}

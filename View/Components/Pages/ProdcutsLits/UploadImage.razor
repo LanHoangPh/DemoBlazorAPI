@@ -1,0 +1,78 @@
+﻿@page "/upload"
+@using System.IO
+@inject IWebHostEnvironment Environment
+
+<h3>Upload Ảnh</h3>
+
+<div class="form-group">
+    <label>Chọn ảnh:</label>
+    <InputFile OnChange="HandleFileSelected" />
+    @if (!string.IsNullOrEmpty(message))
+    {
+        <p class="text-danger">@message</p>
+    }
+</div>
+
+@if (selectedFile != null)
+{
+    <button class="btn btn-primary" @onclick="UploadFile">Upload</button>
+}
+
+@if (!string.IsNullOrEmpty(uploadedFilePath))
+{
+    <h4>Ảnh vừa upload:</h4>
+    <img src="@uploadedFilePath" alt="Uploaded Image" style="max-width: 300px;" />
+}
+
+@code {
+    private string message = "";
+    private string uploadedFilePath = "";
+    private IBrowserFile selectedFile;
+    private readonly List<string> allowedExtensions = new List<string> { ".jpg", ".png", ".gif" };
+    private const long maxFileSize = 3 * 1024 * 1024; // 3MB
+
+    private void HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        selectedFile = e.File;
+        if (selectedFile != null)
+        {
+            if (selectedFile.Size > maxFileSize)
+            {
+                message = "File quá lớn! Kích thước tối đa cho phép là 3MB.";
+                selectedFile = null;
+                return;
+            }
+
+            var fileExtension = Path.GetExtension(selectedFile.Name).ToLower();
+            if (!allowedExtensions.Contains(fileExtension))
+            {
+                message = "Định dạng file không hợp lệ! Chỉ chấp nhận .jpg, .png, .gif.";
+                selectedFile = null;
+                return;
+            }
+
+            message = $"File {selectedFile.Name} đã được chọn. Nhấn Upload để tải lên.";
+        }
+    }
+
+    private async Task UploadFile()
+    {
+        if (selectedFile != null)
+        {
+            var fileName = $"{Guid.NewGuid()}{Path.GetExtension(selectedFile.Name)}";
+            var path = Path.Combine(Environment.WebRootPath, "uploads", fileName);
+
+            var uploadsDir = Path.Combine(Environment.WebRootPath, "uploads");
+            if (!Directory.Exists(uploadsDir))
+            {
+                Directory.CreateDirectory(uploadsDir);
+            }
+            await using var stream = new FileStream(path, FileMode.Create);
+            await selectedFile.OpenReadStream(maxFileSize).CopyToAsync(stream);
+
+            uploadedFilePath = $"/uploads/{fileName}";
+            message = $"Upload thành công: {selectedFile.Name}";
+            selectedFile = null; 
+        }
+    }
+}
