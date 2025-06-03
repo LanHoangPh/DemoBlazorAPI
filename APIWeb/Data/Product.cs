@@ -24,7 +24,7 @@ namespace APIWeb.Data
         [Range(1, int.MaxValue, ErrorMessage = "Số lượng phải lớn hơn 0")]
         public int SoLuong { get; set; }
 
-        // public string HinhAnhwww { get; set; } // Lưu ảnh vào wwwroot
+        public string HinhAnhwww { get; set; } // Lưu ảnh vào wwwroot
         // public byte[] Hinh { get; set; } // Lưu vào database
     }
 }

@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using APIWeb.Data;
 using APIWeb.IRepository;
+using Microsoft.Extensions.Hosting;
 
 namespace APIWeb.Controllers
 {
@@ -16,9 +17,12 @@ namespace APIWeb.Controllers
     {
         private readonly IRepositoryProduct _repositoryProduct;
 
-        public ProductsController(IRepositoryProduct repositoryProduct)
+        private readonly IWebHostEnvironment _environment;
+
+        public ProductsController(IRepositoryProduct repositoryProduct, IWebHostEnvironment environment)
         {
             this._repositoryProduct = repositoryProduct;
+            _environment = environment;
         }
 
         // GET: api/Products
@@ -88,22 +92,46 @@ namespace APIWeb.Controllers
             await _repositoryProduct.DeleteProduct(id);
             return NoContent();
         }
-        [HttpPost("UploadImage")]
-        public async Task<IActionResult> UploadImage(IFormFile formFile)
+        [HttpPost("upload")]
+        public async Task<IActionResult> UploadImage(IFormFile file)
         {
-            if (formFile == null || formFile.Length == 0)
-                return BadRequest("File không hợp lệ.");
-
-            var fileName = Path.GetFileName(formFile.FileName);
-            var path = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", fileName);
-
-            using (var stream = new FileStream(path, FileMode.Create))
+            if (file == null || file.Length == 0)
             {
-                await formFile.CopyToAsync(stream);
+                return BadRequest(new { message = "Không có file được chọn." });
             }
 
-            var relativePath = $"/uploads/{fileName}";
-            return Ok(new { FilePath = relativePath });
+            // Validate kích thước file (tối đa 3MB)
+            const long maxFileSize = 3 * 1024 * 1024; // 3MB
+            if (file.Length > maxFileSize)
+            {
+                return BadRequest(new { message = "File quá lớn! Kích thước tối đa cho phép là 3MB." });
+            }
+
+            // Validate định dạng file (jpg, png, gif)
+            var allowedExtensions = new[] { ".jpg", ".png", ".gif" };
+            var fileExtension = Path.GetExtension(file.FileName).ToLower();
+            if (!allowedExtensions.Contains(fileExtension))
+            {
+                return BadRequest(new { message = "Định dạng file không hợp lệ! Chỉ chấp nhận .jpg, .png, .gif." });
+            }
+
+            // Tạo tên file duy nhất và lưu vào wwwroot/uploads
+            var fileName = $"{Guid.NewGuid()}{fileExtension}";
+            var uploadsDir = Path.Combine(_environment.WebRootPath, "uploads");
+            if (!Directory.Exists(uploadsDir))
+            {
+                Directory.CreateDirectory(uploadsDir);
+            }
+
+            var filePath = Path.Combine(uploadsDir, fileName);
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await file.CopyToAsync(stream);
+            }
+
+            // Trả về đường dẫn của ảnh
+            var fileUrl = $"/uploads/{fileName}";
+            return Ok(new { message = "Upload thành công!", fileUrl });
         }
     }
 }

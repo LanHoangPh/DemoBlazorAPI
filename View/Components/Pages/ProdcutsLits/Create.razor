@@ -3,6 +3,8 @@
 @using View.Services
 @inject NavigationManager NavigationManager
 @inject ProductService ProductService
+@inject HttpClient Http
+
 <h3>CreateProduct</h3>
 <EditForm OnValidSubmit="Submit" Model="Products">
     <div class="container">
@@ -28,6 +30,27 @@
                 <InputNumber class="form-control" @bind-Value="Products.SoLuong" />
                 <ValidationMessage For="() => Products.SoLuong"></ValidationMessage>
             </div>
+            <div class="col-md-6">
+                <label class="form-label">Ảnh sản phẩm</label>
+                <InputFile OnChange="HandleFileSelected" />
+                @if (!string.IsNullOrEmpty(message))
+                {
+                    <p class="text-danger">@message</p>
+                }
+            </div>
+            @if (selectedFile != null)
+            {
+                <div class="col-md-6">
+                    <button type="button" class="btn btn-primary mt-2" @onclick="UploadFile">Upload Ảnh</button>
+                </div>
+            }
+            @if (!string.IsNullOrEmpty(Products.HinhAnhwww))
+            {
+                <div class="col-md-6">
+                    <h5>Ảnh đã upload:</h5>
+                    <img src="@Products.HinhAnhwww" alt="Uploaded Image" style="max-width: 200px;" />
+                </div>
+            }
         </div>
         <button type="submit" class="btn btn-primary">Save</button>
     </div>
@@ -36,15 +59,61 @@
     <button class="btn btn-secondary" @onclick="BackToList">Back To List</button>
 </div>
 
-@code{
-    public Product Products = new ();
+@code {
+    public Product Products = new();
+    private string message = "";
+    private IBrowserFile selectedFile;
+
+    private void HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        selectedFile = e.File;
+        if (selectedFile != null)
+        {
+            message = $"File {selectedFile.Name} đã được chọn. Nhấn Upload để tải lên.";
+        }
+    }
+
+    private async Task UploadFile()
+    {
+        if (selectedFile != null)
+        {
+            // Tạo nội dung multipart để gửi file qua API
+            using var content = new MultipartFormDataContent();
+            using var fileStream = selectedFile.OpenReadStream();
+            using var streamContent = new StreamContent(fileStream);
+            content.Add(streamContent, "file", selectedFile.Name);
+
+            // Gọi API để upload ảnh
+            var response = await Http.PostAsync("api/image/upload", content);
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<UploadResponse>();
+                Products.HinhAnhwww = result.FileUrl; // Lưu đường dẫn vào model
+                message = result.Message;
+                selectedFile = null; // Reset sau khi upload
+            }
+            else
+            {
+                var result = await response.Content.ReadFromJsonAsync<UploadResponse>();
+                message = result.Message;
+            }
+        }
+    }
+
     public async Task Submit()
     {
         await ProductService.CreateProduct(Products);
         NavigationManager.NavigateTo("/products/indexlist");
     }
+
     private void BackToList()
     {
         NavigationManager.NavigateTo("/products/indexlist");
+    }
+
+    private class UploadResponse
+    {
+        public string Message { get; set; }
+        public string FileUrl { get; set; }
     }
 }
