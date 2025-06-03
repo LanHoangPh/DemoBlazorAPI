@@ -25,7 +25,7 @@ namespace APIWeb.Controllers
             _environment = environment;
         }
 
-        // GET: api/Products
+
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Product>>> GetProducts()
         {
