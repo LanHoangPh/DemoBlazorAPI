@@ -27,15 +27,7 @@ namespace APIWeb.Controllers
 
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Product>>> GetProducts()
-        {
-            var products = await _repositoryProduct.GetAllProducts();
-            if (products == null)
-            {
-                return NotFound();
-            }
-            return Ok(products);
-        }
+       
 
         // GET: api/Products/5
         [HttpGet("{id}")]
